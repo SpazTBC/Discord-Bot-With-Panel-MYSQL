@@ -1,0 +1,278 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ guildname }} Admin Dashboard</title>
+    <link href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        /* Custom Styles */
+        body {
+            background-color: #f8f9fa;
+            padding-top: 50px;
+        }
+        .container {
+            background-color: #ffffff;
+            box-shadow: 0px 0px 10px rgba(0, 0, 0, 0.1);
+            padding: 20px;
+            border-radius: 10px;
+        }
+        .section {
+            margin-bottom: 30px;
+        }
+        .list-group-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .btn-group {
+            margin-left: auto;
+        }
+    </style>
+</head>
+<body>
+    <div class="container mt-5">
+        <!-- Give Role -->
+        <div class="row section">
+            <div class="col">
+                <h1>Give Role</h1>
+                <div class="form-group">
+                    <label for="user-select">Select User:</label>
+                    <select class="form-control" id="user-select">
+                        <!-- Populate dropdown with users -->
+                        <!-- Example option: <option value="user_id">User Name (user_id)</option> -->
+                        {% for user in users %}
+                        <option value="{{ user['discord_id'] }}">{{ user['username'] }} ({{ user['discord_id'] }})</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="role-select">Select Role:</label>
+                    <select class="form-control" id="role-select">
+                        <!-- Populate dropdown with roles -->
+                        {% for role_id, role_name in roles.items() %}
+                        <option value="{{ role_id }}">{{ role_name }} ({{ role_id }})</option>
+                        {% endfor %}
+                    </select>
+                </div>                
+                <button type="button" class="btn btn-primary" onclick="giveRole()">Give Role</button>
+            </div>
+        </div>
+
+        <!-- Guild Information -->
+        <div class="row section">
+            <div class="col">
+                <h1>Guild Information</h1>
+                <!-- Display guild information here -->
+            </div>
+        </div>
+
+        <!-- Admins -->
+        <div class="row section">
+            <div class="col">
+                <h1>Admins</h1>
+                <ul class="list-group">
+                    {% for admin in admins %}
+                    <li class="list-group-item d-flex justify-content-between align-items-center">
+                        <span>User ID: {{ admin['discord_id'] }}</span>
+                        <span>Username: {{ admin['username'] }}</span>
+                        <div class="btn-group admin-actions" role="group">
+                            <button type="button" class="btn btn-danger" onclick="ban('{{ admin['discord_id'] }}')">Ban</button>
+                            <button type="button" class="btn btn-warning" onclick="kick('{{ admin['discord_id'] }}')">Kick</button>
+                            <button type="button" class="btn btn-info" onclick="removeAdmin('{{ admin['discord_id'] }}')">Remove Admin</button>
+                        </div>
+                    </li>
+                    {% endfor %}
+                </ul>
+            </div>
+        </div>
+
+        <!-- Owners -->
+        <div class="row section">
+            <div class="col">
+                <h1>Owners</h1>
+                <ul class="list-group">
+                    {% for owner in owners %}
+                    <li class="list-group-item">{{ owner['username'] }} ({{ owner['discord_id'] }})</li>
+                    {% endfor %}
+                </ul>
+            </div>
+        </div>
+
+<!-- Users -->
+<div class="row section">
+    <div class="col">
+        <h1>Users ({{ users|length }})</h1>
+        <ul class="list-group">
+            {% for user in users %}
+            <li class="list-group-item d-flex justify-content-between align-items-center">
+                <span>User ID: {{ user['discord_id'] }}</span>
+                <span>Username: {{ user['username'] }}</span>
+                <div class="btn-group user-actions" role="group">
+                    <button type="button" class="btn btn-danger" onclick="ban('{{ user['discord_id'] }}')">Ban</button>
+                    <button type="button" class="btn btn-warning" onclick="kick('{{ user['discord_id'] }}')">Kick</button>
+                    <button type="button" class="btn btn-primary" onclick="addAdmin('{{ user['discord_id'] }}', '{{ user['username'] }}')">Add Admin</button>
+                </div>
+            </li>
+            {% endfor %}
+        </ul>
+    </div>
+</div>
+
+
+    <script>
+    // Function to fetch guild roles data from the server
+    function fetchGuildRoles() {
+        fetch('/api/guild_roles') // Replace '/api/guild_roles' with the actual API endpoint URL
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error('Network response was not ok');
+                }
+                return response.json();
+            })
+            .then(data => {
+                // Once the data is fetched successfully, update the UI with the guild roles information
+                console.log('Guild roles data:', data);
+                updateGuildRoles(data);
+            })
+            .catch(error => {
+                console.error('Error fetching guild roles:', error);
+            });
+    }
+
+
+// Function to handle giving a role to a user
+function giveRole() {
+    const userId = document.getElementById('user-select').value;
+    const roleId = document.getElementById('role-select').value;
+
+    if (!userId || !roleId) {
+        console.error('Please select both a user and a role.');
+        return;
+    }
+
+    // Logic to give the role to the user
+    console.log(`Giving role ID ${roleId} to user ID ${userId}`);
+    
+    // Create form data
+    const formData = new FormData();
+    formData.append('user_id', userId);
+    formData.append('role_id', roleId);
+    formData.append('action_type', 'give_role'); // Specify the action type
+    
+    // Send POST request
+    fetch('/userupdate/data', {
+        method: 'POST',
+        body: formData
+    })
+    .then(response => {
+        if (!response.ok) {
+            throw new Error('Network response was not ok');
+        }
+        return response.json();
+    })
+    .then(data => {
+        console.log('Response from server:', data);
+        // You can handle the response here, for example, display a message in the UI
+    })
+    .catch(error => {
+        console.error('Error sending update request:', error);
+    });
+}
+
+// Function to handle banning a user
+function ban(userId) {
+    // Logic to ban the user
+    var reason = prompt('Enter ban reason (default: Panel Ban):') || 'Panel Ban';
+    var action_type = 'ban'; // Define action_type here
+    console.log('Banning user ID ' + userId + ' with reason: ' + reason + ' with action_type as: ' + action_type);
+    
+    // Create form data
+    const formData = new FormData();
+    formData.append('user_id', userId);
+    formData.append('reason', reason);
+    formData.append('action_type', action_type);
+    formData.append('role_id', ''); // Add an empty role_id
+    
+    // Send POST request
+    sendUpdateRequest(`/userupdate/ban/${userId}`, formData); // Specify the action type
+}
+
+// Function to handle kicking a user
+function kick(userId) {
+    // Logic to kick the user
+    var reason = prompt('Enter kick reason (default: Panel Kick):') || 'Panel Kick';
+    var action_type = 'kick'; // Define action_type here
+    console.log('Kicking user ID ' + userId + ' with reason: ' + reason + ' with action_type as: ' + action_type);
+    
+    // Create form data
+    const formData = new FormData();
+    formData.append('user_id', userId);
+    formData.append('reason', reason);
+    formData.append('action_type', action_type);
+    formData.append('role_id', ''); // Add an empty role_id
+    
+    // Send POST request
+    sendUpdateRequest(`/userupdate/kick/${userId}`, formData); // Specify the action type
+}
+
+// Function to handle adding an admin
+function addAdmin(userId, username) {
+    // Logic to add the user as admin
+    console.log('Adding user ID ' + userId + ' as admin');
+    sendUpdateRequest(`/userupdate/addadmin/${userId}`, { username: username, action_type: 'add_admin' }); // Specify the action type
+}
+
+// Function to handle removing an admin
+function removeAdmin(userId) {
+    console.log('Removing user ID ' + userId + ' as an admin');
+    fetch(`/userupdate/removeadmin/${userId}`, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ action_type: 'remove_admin' }) // Specify the action type
+    })
+    .then(response => {
+        if (!response.ok) {
+            throw new Error('Network response was not ok');
+        }
+        return response.json();
+    })
+    .then(data => {
+        console.log('Response from server:', data);
+        // Handle the response here
+    })
+    .catch(error => {
+        console.error('Error sending remove admin request:', error);
+    });
+}
+
+
+
+    // Function to send the update request to the server
+    function sendUpdateRequest(url, data) {
+        fetch(url, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(data || {})
+        })
+        .then(response => {
+            if (!response.ok) {
+                throw new Error('Network response was not ok');
+            }
+            return response.json();
+        })
+        .then(data => {
+            console.log('Response from server:', data);
+            // You can handle the response here, for example, display a message in the UI
+        })
+        .catch(error => {
+            console.error('Error sending update request:', error);
+        });
+    }
+    </script>
+</body>
+</html>

@@ -1,0 +1,180 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard</title>
+    <link href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        /* Global Styles */
+        body {
+            background-color: #f8f9fa;
+            padding-top: 50px;
+        }
+        .container {
+            background-color: #ffffff;
+            box-shadow: 0px 0px 10px rgba(0, 0, 0, 0.1);
+            padding: 20px;
+            border-radius: 10px;
+        }
+        h1, h2 {
+            color: #007bff;
+        }
+        .list-group-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .btn-group {
+            margin-left: auto;
+        }
+        /* Custom Styles */
+        .guild-info {
+            margin-bottom: 30px;
+        }
+        .guild-info p {
+            margin-bottom: 0;
+        }
+        .admin-actions {
+            margin-top: 10px;
+        }
+        .user-actions {
+            margin-top: 10px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container mt-5">
+        <!-- Guild Information -->
+        <div class="row guild-info">
+            <div class="col">
+                <h1>Guild Information</h1>
+                <p><strong>Guild Owner:</strong> <span id="guild-owner"></span></p>
+            </div>
+        </div>
+        
+        <!-- Admins -->
+        <div class="row">
+            <div class="col">
+                <h1>Admins</h1>
+                <ul class="list-group">
+                    {% for admin_id, admin_username in admins %}
+                    <li class="list-group-item d-flex justify-content-between align-items-center">
+                        <span>{{ admin_username }} ({{ admin_id }})</span>
+                    </li>
+                    {% endfor %}
+                </ul>
+            </div>
+            
+            <!-- Owners -->
+            <div class="col">
+                <h1>Owners</h1>
+                <ul class="list-group">
+                    {% for owner_id, owner_username in owners %}
+                    <li class="list-group-item">{{ owner_username }} ({{ owner_id }})</li>
+                    {% endfor %}
+                </ul>
+            </div>
+            
+            <!-- Users -->
+            <div class="col">
+                <h1>Users ({{ users|length }})</h1>
+                <ul class="list-group">
+                    {% for user_id, user_username in users %}
+                    <li class="list-group-item d-flex justify-content-between align-items-center">
+                        <span>{{ user_username }} ({{ user_id }})</span>
+                        {% if user_id not in admins | map(attribute=0) and user_id not in owners | map(attribute=0) %}
+                        <div class="btn-group user-actions" role="group">
+                            <!-- You can add custom actions for regular users here if needed -->
+                        </div>
+                        {% endif %}
+                    </li>
+                    {% endfor %}
+                </ul>
+            </div>
+        </div>
+    </div>
+
+    <script>
+    // Function to populate the user dropdown with data from the users file
+    function populateUserDropdown(users) {
+        const userSelect = document.getElementById('user-select');
+        // Clear previous options
+        userSelect.innerHTML = '<option value="">Select a user</option>';
+
+        // Populate dropdown with users
+        users.forEach(user => {
+            const [userId, userName] = user.split(':');
+            const option = document.createElement('option');
+            option.value = userId;
+            option.textContent = `${userName} (${userId})`;
+            userSelect.appendChild(option);
+        });
+    }
+
+    // Function to populate the role dropdown with data from the JSON response
+    function populateRoleDropdown(roles) {
+        const roleSelect = document.getElementById('role-select');
+        // Clear previous options
+        roleSelect.innerHTML = '<option value="">Select a role</option>';
+
+        // Populate dropdown with roles
+        Object.keys(roles).forEach(roleId => {
+            const roleName = roles[roleId];
+            const option = document.createElement('option');
+            option.value = roleId;
+            option.textContent = `${roleName} (${roleId})`;
+            roleSelect.appendChild(option);
+        });
+    }
+
+    // Fetch Guild Owner's information from the server
+    fetch('/discord/discordinfo')
+    .then(response => {
+        if (!response.ok) {
+            throw new Error('Network response was not ok');
+        }
+        return response.json();
+    })
+    .then(data => {
+        console.log('Guild Owner Information:', data);
+
+        // Extract guild owner information from the response
+        const guildOwner = data[0] || {}; // Assuming the guild owner information is stored in the first element of the array
+
+        // Update the HTML with Guild Owner's information
+        const guildOwnerName = guildOwner.guild_owner || 'Undefined';
+        const guildOwnerGuildName = guildOwner.discord_name || 'Undefined';
+        document.getElementById('guild-owner').innerText = `${guildOwnerName} (${guildOwnerGuildName})`;
+
+        // Extract roles data from the response
+        const roles = guildOwner.roles || {}; // Get roles object, default to an empty object if not present
+
+        // Populate dropdown with roles
+        populateRoleDropdown(roles);
+    })
+    .catch(error => {
+        console.error('Error fetching Guild Owner information:', error);
+    });
+
+
+    // Fetch users from users.txt and populate the dropdown
+    fetch('users.txt')
+        .then(response => {
+            if (!response.ok) {
+                throw new Error('Network response was not ok');
+            }
+            return response.text();
+        })
+        .then(data => {
+            // Split the data into lines and populate the dropdown
+            const users = data.trim().split('\n');
+            populateUserDropdown(users);
+        })
+        .catch(error => {
+            console.error('Error fetching users:', error);
+        });
+    </script>
+    
+</body>
+</html>
